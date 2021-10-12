@@ -10,7 +10,7 @@ setup(
     license="unlicense",
     packages=find_packages(),
     install_requires=[
-        'opencv-contrib-python==4.0.0.21',
+        'opencv-contrib-python==4.1.1.26',
         'numpy'
     ],
     zip_safe=False
