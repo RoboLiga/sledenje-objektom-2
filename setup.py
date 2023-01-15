@@ -12,6 +12,7 @@ setup(
     install_requires=[
         'opencv-contrib-python==4.7.0.68',
         'numpy==1.24.1',
+        'shapely==2.0.0'
     ],
     zip_safe=False
 )

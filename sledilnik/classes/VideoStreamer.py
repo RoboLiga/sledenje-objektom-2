@@ -7,6 +7,8 @@ class VideoStreamer:
     """Fetches video from camera"""
 
     def __init__(self):
+        self.ret = None
+        self.frame = None
         self.video = None
         self.running = False
         return
@@ -25,12 +27,12 @@ class VideoStreamer:
         self.ret, self.frame = self.video.read()
         if not self.ret:
             self.video.release()
-            raise IOError(("Couldn't open video frame."))
+            raise IOError("Couldn't open video frame.")
         self.running = True
 
         # Start the thread to read frames from the video stream
         t = threading.Thread(target=self.update, args=())
-        t.setDaemon(True)
+        t.daemon = True
         t.start()
         return self
 

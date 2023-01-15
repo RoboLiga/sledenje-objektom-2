@@ -4,212 +4,176 @@ import os
 import pickle
 import sys
 from timeit import default_timer as timer
+from typing import List
 
-import cv2
 import numpy as np
 
-from .Resources import ResGUIText, ResKeys
-from .Tracker import Tracker
-from .classes.VideoStreamer import VideoStreamer
-from .configs.MapConfig import MapConfig
+from sledilnik.Resources import ResKeys
+from sledilnik.Tracker import Tracker
+from sledilnik.classes.Field import Field
+from sledilnik.classes.Point import Point
+from sledilnik.classes.VideoStreamer import VideoStreamer
+from sledilnik.draw_utils import *
 
 
 class TrackerSetup(Tracker):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, config_path='./tracker_config.yaml'):
+        self.debug = True
+        super().__init__(config_path)
 
-        with open(self.fileNamesConfig.fieldsFilePath, "r") as output:
-            self.fields = json.load(output)
+        self.fields_names = self.config['fields_names']
+        self.fields_corners = []
+        self.fields = {}
+        if os.path.isfile(self.config['fields_path']):
+            print('Loading fields_corners and fields from file...')
+            saved_fields = pickle.load(open(self.config['fields_path'], "rb"))
+            self.fields_corners = saved_fields['fields_corners']
+            self.fields = saved_fields['fields']
 
-        self.sFieldDefineGuide = []
-        for field in self.fields:
-            self.sFieldDefineGuide.extend(self.createText(field))
-        self.sFieldDefineGuide.append(self.sFieldDefineGuide[0])
+        self.field_guide_index = 0
+        self.field_guides = []
+        for field in self.fields_names:
+            self.field_guides.extend(create_guide_text(field))
+        self.field_guides.append(self.field_guides[0])
 
-        self.fieldDefineGuideId = 0
-        self.numOfCorners = len(self.fields) * 4
-
-    def initState(self):
-        quit = False
-        configMap = MapConfig()
-        if os.path.isfile(self.fileNamesConfig.mapConfigFilePath):
-            configMap = pickle.load(open(self.fileNamesConfig.mapConfigFilePath, "rb"))
-        frameCounter = 0
-
-        return configMap, quit, frameCounter
-
-    @staticmethod
-    def putTextCentered(img, text, pos, font, fontScale, color, thickness=None, lineType=None):
-        textsize = cv2.getTextSize(text, font, 1, 2)[0]
-        textX = (pos[0] - textsize[0] // 2)
-        cv2.putText(img, text, (textX, pos[1]), font, fontScale, color, thickness, lineType)
-
-    def drawOverlay(self, frame, configMap, fieldEditMode):
-        # Set font
-        font = cv2.FONT_HERSHEY_SIMPLEX
-
-        for i in range(len(configMap.fieldCorners)):
-            cv2.circle(frame, tuple(configMap.fieldCorners[i]), 3, (0, 255, 255), 3)
-            if i % 4 == 3:
-                cv2.line(frame, tuple(configMap.fieldCorners[i - 1]), tuple(configMap.fieldCorners[i]), (0, 255, 255),
-                         2)
-                cv2.line(frame, tuple(configMap.fieldCorners[i - 3]), tuple(configMap.fieldCorners[i]), (0, 255, 255),
-                         2)
-            elif i > 0 and i % 4 != 0:
-                cv2.line(frame, tuple(configMap.fieldCorners[i - 1]), tuple(configMap.fieldCorners[i]), (0, 255, 255),
-                         2)
-
-        # Display info when in map edit mode
-        if fieldEditMode:
-            self.putTextCentered(frame, self.sFieldDefineGuide[self.fieldDefineGuideId],
-                                 (configMap.imageWidth // 2, 30), font, 1, (255, 0, 0), 2, cv2.LINE_AA)
-
-        # Display help
-        cv2.putText(frame, ResGUIText.sHelp, (10, configMap.imageHeight - 10), font, 0.5, (0, 0, 255), 1,
-                    cv2.LINE_AA)
-
-    @staticmethod
-    def drawFPS(img, fps):
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        # Display FPS
-        cv2.putText(img, ResGUIText.sFps + str(int(fps)), (10, 30), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
-
-    def getClickPoint(self, event, x, y, flags, param):
-        """Callback function used in handling click events when defining the map.
-        Args:
-            event (int): type of event
-            x (int): event position x
-            y (int): event position y
-            flags: event flags
-            param:
-        Returns:
-            bool: True if object in area
-        """
-        configMap = param
-        if event == cv2.EVENT_LBUTTONDOWN:
-
-            configMap.fieldCorners.append([x, y])
-            self.fieldDefineGuideId += 1
-
-            if len(configMap.fieldCorners) == self.numOfCorners:
-                src = np.array([configMap.fieldCorners[0], configMap.fieldCorners[1], configMap.fieldCorners[2],
-                                configMap.fieldCorners[3]],
-                               np.float32)
-                dst = np.array(configMap.fieldCornersVirtual, np.float32)
-                configMap.M = cv2.getPerspectiveTransform(src, dst)
-
-    def processKeys(self, configMap: MapConfig, fieldEditMode, quit):
-        # Detect key press
-        keypressed = cv2.waitKey(1) & 0xFF
-
-        # Edit Map mode
-        if keypressed == ord(ResKeys.editMapKey):
-            fieldEditMode = not fieldEditMode
-            if fieldEditMode:
-                configMap.fieldCorners.clear()
-                configMap.fields.clear()
-                ResGUIText.fieldDefineGuideId = 0
-                cv2.setMouseCallback(ResGUIText.sWindowName, self.getClickPoint, configMap)
-
-        # Quit
-        elif keypressed == ord(ResKeys.quitKey):
-            quit = True
-
-        return configMap, fieldEditMode, quit
-
-    @staticmethod
-    def createText(name):
-        return ['Mark ' + name + ' Top Left Corner',
-                'Mark ' + name + ' Field Top Right Corner',
-                'Mark ' + name + ' Field Bottom Right Corner',
-                'Mark ' + name + ' Field Bottom Left Corner']
+        self.should_quit = False
+        self.edit_mode = False
+        self.frame_counter = 0
 
     def start(self):
         # Load video
         cap = VideoStreamer()
-        cap.start(self.fileNamesConfig.videoSource)
-
-        # Initialize trackerSetup stat variables
-        configMap, quit, frameCounter = self.initState()
-        fieldEditMode = False
+        cap.start(self.config['video_source'])
 
         # Create window
         cv2.namedWindow(ResGUIText.sWindowName, cv2.WINDOW_NORMAL)
 
         ts = timer()
-        while not quit:
+        while not self.should_quit and cap.running:
 
             # Load frame-by-frame
-            if cap.running:
-                frame = cap.read()
+            frame = cap.read()
+            if frame is None:
+                if self.debug:
+                    cap.stop()
+                    cap = VideoStreamer()
+                    cap.start(self.config['video_source'])
+                    continue
+                break
 
-                if frame is None:
-                    break
+            # Convert to grayscale for Aruco detection
+            self.frame_counter += 1
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-                # Convert to grayscale for Aruco detection
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                frameCounter = frameCounter + 1
+            # TODO: Uncomment this
+            # frame = self.undistort(frame)
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
-                frame = self.undistort(frame)
-                configMap.imageHeight, configMap.imageWidth = frame.shape
-                frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+            # If we set all the corners, dump the latest map into file
+            if self.edit_mode and len(self.fields_corners) == len(self.fields_names) * 4:
+                self.save_fields()
+                self.edit_mode = not self.edit_mode
+                cv2.setMouseCallback(ResGUIText.sWindowName, lambda *args: None)
 
-                # Dump latest map into file
-                if fieldEditMode:
-                    if len(configMap.fieldCorners) == self.numOfCorners:
+            # Draw GUI and objects
+            self.draw_overlay(frame)
 
-                        src = np.array([configMap.fieldCorners[0], configMap.fieldCorners[1],
-                                        configMap.fieldCorners[2], configMap.fieldCorners[3]], np.float32)
-                        dst = np.array(configMap.fieldCornersVirtual, np.float32)
-                        configMap.M = cv2.getPerspectiveTransform(src, dst)
+            # Process keys
+            self.on_key_press()
 
-                        configMap.parseFields(self.fields)
+            # Computer and display FPS
+            te = timer()
+            fps = 1 / (te - ts)
+            draw_fps(frame, fps)
+            ts = te
 
-                        with open(self.fileNamesConfig.mapConfigFilePath, 'wb') as output:
-                            pickle.dump(configMap, output, pickle.HIGHEST_PROTOCOL)
-                            print(configMap.fields)
+            # Show frame
+            cv2.imshow(ResGUIText.sWindowName, frame)
 
-                        fieldEditMode = not fieldEditMode
-                        cv2.setMouseCallback(ResGUIText.sWindowName, lambda *args: None)
-
-                # Draw GUI and objects
-                self.drawOverlay(frame, configMap, fieldEditMode)
-
-                # Process keys
-                (configMap, fieldEditMode, quit) = self.processKeys(configMap, fieldEditMode, quit)
-
-                # Computer and display FPS
-                te = timer()
-                fps = 1 / (te - ts)
-                self.drawFPS(frame, fps)
-                ts = te
-
-                # Show frame
-                cv2.imshow(ResGUIText.sWindowName, frame)
-
+        cap.stop()
         cv2.destroyAllWindows()
         sys.exit(0)
 
+    def draw_overlay(self, frame):
+        draw_lines(frame, self.fields_corners)
+        draw_help(frame)
 
-def main(argv, trackerSetup: TrackerSetup):
+        if self.edit_mode:
+            draw_guide(frame, self.field_guides[self.field_guide_index])
+
+    def on_click(self, event, x, y, flags, param):
+        if self.edit_mode and event == cv2.EVENT_LBUTTONDOWN:
+            self.fields_corners.append([x, y])
+            self.field_guide_index += 1
+
+    def on_key_press(self):
+        # Detect key press
+        key_pressed = cv2.waitKey(1) & 0xFF
+
+        # Edit Map mode
+        if key_pressed == ord(ResKeys.editMapKey):
+            self.edit_mode = not self.edit_mode
+            if self.edit_mode:
+                self.fields_corners.clear()
+                self.field_guide_index = 0
+                cv2.setMouseCallback(ResGUIText.sWindowName, self.on_click)
+
+        # Quit
+        elif key_pressed == ord(ResKeys.quitKey):
+            self.should_quit = True
+
+    def save_fields(self):
+        """
+        This method creates fields from the corners of the fields and saves them to a file.
+        """
+
+        transformation_matrix = cv2.getPerspectiveTransform(
+            np.array(self.fields_corners[0:4], np.float32),
+            np.array(self.config['map_virtual_corners'], np.float32),
+        )
+
+        for i, field_name in enumerate(self.fields_names):
+            field = []
+            for j in range(4):
+                field.append(Point(*self.move_origin(*self.fields_corners[i * 4 + j], transformation_matrix)))
+
+            self.fields[field_name] = Field(*field)
+
+        with open(self.config['fields_path'], 'wb') as output:
+            pickle.dump(
+                {
+                    'transformation_matrix': transformation_matrix,
+                    'fields_corners': self.fields_corners,
+                    'fields': self.fields
+                },
+                output,
+                pickle.HIGHEST_PROTOCOL
+            )
+
+        print(self.fields)
+
+
+def main(argv, tracker_setup: TrackerSetup):
     try:
         opts, args = getopt.getopt(argv, "hs:c", ["videoSource="])
     except getopt.GetoptError:
-        helpText()
+        help_text()
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-h", "--help"):
-            helpText()
+            help_text()
             sys.exit()
         elif opt in ("-c", "--camera"):
-            trackerSetup.fileNamesConfig.videoSource = 0
+            tracker_setup.config['video_source'] = 0
             print("Set video source to: " + str(0))
         elif opt in ("-s", "--videoSource"):
-            trackerSetup.fileNamesConfig.videoSource = arg
+            tracker_setup.config['video_source'] = arg
             print("Set video source to: " + str(arg))
+        elif opt in ("-d", "--debug"):
+            tracker_setup.debug = True
 
 
-def helpText():
+def help_text():
     print("usage:")
     print("\t-s <videoSource>            sets video source")
     print("\t--videoSource <videoSource> sets video source")
@@ -218,6 +182,6 @@ def helpText():
 
 
 if __name__ == '__main__':
-    trackerSetup = TrackerSetup()
-    main(sys.argv[1:], trackerSetup)
-    trackerSetup.start()
+    tracker = TrackerSetup()
+    main(sys.argv[1:], tracker)
+    tracker.start()

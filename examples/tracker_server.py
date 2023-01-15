@@ -8,12 +8,12 @@ if __name__ == '__main__':
     queue = Queue()
 
     tracker = TrackerGame()
-    tracker.fileNamesConfig.videoSource = 'ROBO_3.mp4'
+    tracker.config['video_source'] = 'ROBO_3.mp4'
     tracker.debug = True
 
     p = Process(target=tracker.start, args=(queue,))
     p.start()
 
     for _ in range(100):
-        gameData: TrackerLiveData = queue.get()
-        print(gameData.reprJSON())
+        game_data: TrackerLiveData = queue.get()
+        print(game_data.to_json())

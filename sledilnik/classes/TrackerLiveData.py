@@ -1,20 +1,15 @@
 from typing import Dict
 
-from sledilnik.classes.MovableObject import MovableObject
+from sledilnik.classes import ObjectTracker
 
 
 class TrackerLiveData:
-    def __init__(self, configMap):
-        self.fields = configMap.fields
-        self.objects: Dict[int, MovableObject] = {}
+    def __init__(self, fields: Dict):
+        self.fields = fields
+        self.objects: Dict[int, ObjectTracker] = {}
 
-    def write(self, objects):
-        self.objects.clear()
-        for idObject, obj in objects.items():
-            self.objects[idObject] = MovableObject(idObject.item(), obj.position[0], obj.position[1], obj.direction)
-
-    def reprJSON(self):
+    def to_json(self):
         return {
-            "fields": {str(fieldId): field.reprJSON() for fieldId, field in self.fields.items()},
-            "objects": {str(objectId): mObject.reprJSON() for objectId, mObject in self.objects.items()}
+            "fields": {str(field_id): field for field_id, field in self.fields.items()},
+            "objects": {str(object_id): game_object.to_json() for object_id, game_object in self.objects.items()}
         }
