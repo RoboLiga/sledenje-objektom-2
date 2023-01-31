@@ -18,8 +18,8 @@ from sledilnik.draw_utils import *
 
 class TrackerSetup(Tracker):
     def __init__(self, config_path='./tracker_config.yaml'):
-        self.debug = True
         super().__init__(config_path)
+        self.debug = self.config['debug']
 
         self.fields_names = self.config['fields_names']
         self.fields_corners = []

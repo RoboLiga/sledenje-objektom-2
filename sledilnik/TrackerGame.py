@@ -20,8 +20,8 @@ from sledilnik.classes.VideoStreamer import VideoStreamer
 
 class TrackerGame(Tracker):
     def __init__(self, config_path="./tracker_config.yaml"):
-        self.debug = True
         super().__init__(config_path)
+        self.debug = self.config['debug']
 
         if os.path.isfile(self.config['fields_path']):
             print('Loading fields_corners and fields from file...')

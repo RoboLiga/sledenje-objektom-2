@@ -104,8 +104,8 @@ class ObjectTracker:
 
     def to_json(self):
         return {
-            "id": self.id,
-            "position": Point(self.position[0], self.position[1]),
+            "id": int(self.id),
+            "position": Point(self.position[0], self.position[1]).to_json(),
             "dir": float(self.direction * 180 / pi)
         }
 

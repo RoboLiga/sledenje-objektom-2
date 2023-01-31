@@ -1,12 +1,14 @@
-
-
+debug: true
 # Pickle file that contains fields
 fields_path: "./saved_fields"
 # Json file that contains names of all fields
 fields_names:
   - poligon
-  - test1
-
+  - team_1_basket
+  - team_2_basket
+  - team_1_zone
+  - team_2_zone
+  - neutral_zone
 #video_source: 0
 video_source: '../examples/ROBO_7.mp4'
 object_timeout: 30
@@ -28,41 +30,41 @@ map_virtual_corners: [
 
 # Kalman filter
 kalman_filter:
-    # Sampling rate
-    dt: 1
-    # Acceleration magnitude
-    u: 0.0
-    acc_noise_mag: 0.003
-    measurement_noise_x: 0.6
-    measurement_noise_y: 0.6
+  # Sampling rate
+  dt: 1
+  # Acceleration magnitude
+  u: 0.0
+  acc_noise_mag: 0.003
+  measurement_noise_x: 0.6
+  measurement_noise_y: 0.6
 
 # AruCo detector
 aruco_detector:
-    # Minimum window for binarization
-    # Too small a window makes whole tags the same color
-    adaptive_thresh_win_size_min: 10
-    # Maximum window for binarization
-    # Too large a window rounds the corners of the bits on the tag
-    adaptive_thresh_win_size_max: 23
-    # Bottom for thresholding
-    # Too low a bottom causes too many candidates, too high distorts tags (probably also dependent on contrast)
-    adaptive_thresh_constant: 7
-    # Minimum size of candidates for tags
-    # Too low checks too many candidates and affects performance
-    min_marker_perimeter_rate: 0.04
-    # Maximum size of candidates for tags
-    # Slightly affects performance, but there are usually not too many large candidates
-    max_marker_perimeter_rate: 0.1
-    # Algorithm crops tag and upsamples it to x pixels per cell
-    # Affects performance
-    perspective_remove_pixel_per_cell: 30
-    # Algorithm crops each cell and looks only at the center
-    # Larger factor crops more
-    perspective_remove_ignored_margin_per_cell: 0.30
-    # Limit how close two tags can be
-    # Because ours can be very close, we have to set this low, which can mean that
-    # the same tag is detected twice, which we can filter out later
-    min_marker_distance_rate: 0.001
+  # Minimum window for binarization
+  # Too small a window makes whole tags the same color
+  adaptive_thresh_win_size_min: 10
+  # Maximum window for binarization
+  # Too large a window rounds the corners of the bits on the tag
+  adaptive_thresh_win_size_max: 23
+  # Bottom for thresholding
+  # Too low a bottom causes too many candidates, too high distorts tags (probably also dependent on contrast)
+  adaptive_thresh_constant: 7
+  # Minimum size of candidates for tags
+  # Too low checks too many candidates and affects performance
+  min_marker_perimeter_rate: 0.04
+  # Maximum size of candidates for tags
+  # Slightly affects performance, but there are usually not too many large candidates
+  max_marker_perimeter_rate: 0.1
+  # Algorithm crops tag and upsamples it to x pixels per cell
+  # Affects performance
+  perspective_remove_pixel_per_cell: 30
+  # Algorithm crops each cell and looks only at the center
+  # Larger factor crops more
+  perspective_remove_ignored_margin_per_cell: 0.30
+  # Limit how close two tags can be
+  # Because ours can be very close, we have to set this low, which can mean that
+  # the same tag is detected twice, which we can filter out later
+  min_marker_distance_rate: 0.001
 
 # Camera
 camera:
