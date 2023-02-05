@@ -65,8 +65,9 @@ class TrackerSetup(Tracker):
             self.frame_counter += 1
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            # TODO: Uncomment this
-            # frame = self.undistort(frame)
+            if self.config['undistort']:
+                frame = self.undistort(frame)
+
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
             # If we set all the corners, dump the latest map into file

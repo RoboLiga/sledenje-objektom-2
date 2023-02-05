@@ -63,8 +63,8 @@ class TrackerGame(Tracker):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             # Undistort image
-            # TODO: Uncomment this
-            # frame = self.undistort(frame)
+            if self.config['undistort']:
+                frame = self.undistort(frame)
 
             # Detect markers
             corners_tracked, ids, rejected_img_points = aruco.detectMarkers(
@@ -120,7 +120,7 @@ class TrackerGame(Tracker):
         # Disable object tracking if not detected for a long time
         for k, v in list(self.data.objects.items()):
             if ((self.frame_counter - v.last_seen) > self.config['object_timeout']) or \
-                    not self.is_valid_pos(v.position[0:2]):
+                    not self.is_valid_pos(v.bounding_box[0:2]):
                 del self.data.objects[k]
                 # objects[k].enabled = False
 
