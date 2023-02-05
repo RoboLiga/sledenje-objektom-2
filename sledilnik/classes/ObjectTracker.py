@@ -14,7 +14,8 @@ class ObjectTracker:
 
     def __init__(self, object_id, position, velocity, config: Dict, accel=(0, 0, 0, 0)):
         self.id = object_id
-        self.position = position
+        self.position: Point = Point(position[0], position[1])
+        self.bounding_box: tuple[int] = position
         self.velocity = velocity
         self.direction = atan2(position[3] - position[1], position[2] - position[0])
 
@@ -97,15 +98,15 @@ class ObjectTracker:
         self.velocity = (self.q[2][0], self.q[3][0])
 
         if not position:
-            self.position = (self.q[0][0], self.q[1][0], self.q2[0][0], self.q2[1][0])
+            self.bounding_box = (self.q[0][0], self.q[1][0], self.q2[0][0], self.q2[1][0])
         else:
-            self.position = position
-        self.direction = atan2(self.position[3] - self.position[1], self.position[2] - self.position[0])
+            self.bounding_box = position
+        self.direction = atan2(self.bounding_box[3] - self.bounding_box[1], self.bounding_box[2] - self.bounding_box[0])
 
     def to_json(self):
         return {
             "id": int(self.id),
-            "position": Point(self.position[0], self.position[1]).to_json(),
+            "position": Point(self.bounding_box[0], self.bounding_box[1]).to_json(),
             "dir": float(self.direction * 180 / pi)
         }
 
