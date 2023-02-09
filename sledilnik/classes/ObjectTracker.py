@@ -101,6 +101,8 @@ class ObjectTracker:
             self.bounding_box = (self.q[0][0], self.q[1][0], self.q2[0][0], self.q2[1][0])
         else:
             self.bounding_box = position
+
+        self.position = Point(self.bounding_box[0], self.bounding_box[1])
         self.direction = atan2(self.bounding_box[3] - self.bounding_box[1], self.bounding_box[2] - self.bounding_box[0])
 
     def to_json(self):
