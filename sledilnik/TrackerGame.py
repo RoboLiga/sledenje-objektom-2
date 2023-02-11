@@ -1,11 +1,8 @@
 #!/usr/bin/env python
-"""Main tracker Script"""
 import copy
-import getopt
 import os
 import pickle
 import sys
-from multiprocessing import Queue
 
 import cv2
 import cv2.aruco as aruco
@@ -19,18 +16,17 @@ from sledilnik.classes.VideoStreamer import VideoStreamer
 
 
 class TrackerGame(Tracker):
-    def __init__(self, config_path="./tracker_config.yaml"):
-        super().__init__(config_path)
-        self.debug = self.config['debug']
+    def __init__(self, tracker_config='./tracker_config.yaml', game_config=None):
+        super().__init__(tracker_config, game_config)
+        self.debug = self.tracker_config['debug']
 
-        if os.path.isfile(self.config['fields_path']):
-            print('Loading fields_corners and fields from file...')
-            saved_fields = pickle.load(open(self.config['fields_path'], "rb"))
+        if os.path.isfile(self.tracker_config['fields_path']):
+            print(f'Loading fields from {self.tracker_config["fields_path"]}')
+            saved_fields = pickle.load(open(self.tracker_config['fields_path'], "rb"))
             self.transformation_matrix = saved_fields['transformation_matrix']
             self.data = TrackerLiveData(saved_fields['fields'])
         else:
-            # throw exception
-            raise FileNotFoundError(f"Fields file ({self.config['fields_path']}) not found.")
+            raise FileNotFoundError(f"Fields file ({self.tracker_config['fields_path']}) not found.")
 
         self.should_quit = False
         self.edit_mode = False
@@ -39,7 +35,7 @@ class TrackerGame(Tracker):
     def start(self, queue=None):
         # Load video
         cap = VideoStreamer()
-        cap.start(self.config['video_source'])
+        cap.start(self.tracker_config['video_source'])
 
         # Create window
         if self.debug:
@@ -54,7 +50,7 @@ class TrackerGame(Tracker):
                 if self.debug:
                     cap.stop()
                     cap = VideoStreamer()
-                    cap.start(self.config['video_source'])
+                    cap.start(self.tracker_config['video_source'])
                     continue
                 break
 
@@ -63,7 +59,7 @@ class TrackerGame(Tracker):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             # Undistort image
-            if self.config['undistort']:
+            if self.tracker_config['undistort']:
                 frame = self.undistort(frame)
 
             # Detect markers
@@ -114,12 +110,12 @@ class TrackerGame(Tracker):
                     object_id,
                     position,
                     (0, 0, 0, 0),
-                    self.config['kalman_filter']
+                    self.tracker_config['kalman_filter']
                 )
 
         # Disable object tracking if not detected for a long time
         for k, v in list(self.data.objects.items()):
-            if ((self.frame_counter - v.last_seen) > self.config['object_timeout']) or \
+            if ((self.frame_counter - v.last_seen) > self.tracker_config['object_timeout']) or \
                     not self.is_valid_pos(v.bounding_box[0:2]):
                 del self.data.objects[k]
                 # objects[k].enabled = False
@@ -133,7 +129,7 @@ class TrackerGame(Tracker):
             self.data.objects[obj].detected = False
 
     def init_aruco_parameters(self):
-        c = self.config['aruco_detector']
+        c = self.tracker_config['aruco_detector']
         aruco_parameters = aruco.DetectorParameters()
         aruco_parameters.adaptiveThreshWinSizeMin = c['adaptive_thresh_win_size_min']
         aruco_parameters.adaptiveThreshWinSizeMax = c['adaptive_thresh_win_size_max']
@@ -157,8 +153,8 @@ class TrackerGame(Tracker):
         """
 
         # Scaling factors
-        scale0 = self.config['camera']['scale0']
-        scale1 = self.config['camera']['scale1']
+        scale0 = self.tracker_config['camera']['scale0']
+        scale1 = self.tracker_config['camera']['scale1']
 
         # Convert screen coordinates to 0-based coordinates
         offset_x = frame.shape[1] / 2
@@ -210,46 +206,10 @@ class TrackerGame(Tracker):
         return mass_centers
 
     def is_valid_pos(self, pos):
-        return self.config['pos_limit_x'][0] <= pos[0] <= self.config['pos_limit_x'][1] and \
-            self.config['pos_limit_y'][0] <= pos[1] <= self.config['pos_limit_y'][1]
+        return self.tracker_config['pos_limit_x'][0] <= pos[0] <= self.tracker_config['pos_limit_x'][1] and \
+            self.tracker_config['pos_limit_y'][0] <= pos[1] <= self.tracker_config['pos_limit_y'][1]
 
     def on_key_press(self):
         # Detect key press
         key_pressed = cv2.waitKey(1) & 0xFF
         self.should_quit = key_pressed == ord(ResKeys.quitKey)
-
-
-def main(argv, tracker_game: TrackerGame):
-    try:
-        opts, args = getopt.getopt(argv, "hs:cd", ["videoSource="])
-    except getopt.GetoptError:
-        help_text()
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            help_text()
-            sys.exit()
-        elif opt in ("-c", "--camera"):
-            tracker_game.config['video_source'] = 0
-            print("Set video source to: 0")
-        elif opt in ("-s", "--videoSource"):
-            tracker_game.config['video_source'] = arg
-            print("Set video source to: " + str(arg))
-        elif opt in ("-d", "--debug"):
-            tracker_game.debug = True
-
-
-def help_text():
-    print("usage:")
-    print("\t-s <videoSource>            sets video source")
-    print("\t--videoSource <videoSource> sets video source")
-    print("\t-c                          sets camera as video source")
-    print("\t--camera                    sets camera as video source")
-    print("\t-d                          turns on debug mode")
-    print("\t--debug                     turns on debug mode")
-
-
-if __name__ == '__main__':
-    tracker = TrackerGame()
-    main(sys.argv[1:], tracker)
-    tracker.start(Queue())

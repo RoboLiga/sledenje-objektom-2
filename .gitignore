@@ -107,4 +107,5 @@ venv.bak/
 *.mp4
 
 .idea
-/sledilnik/saved_fields
+/saved_fields
+/saved_fields

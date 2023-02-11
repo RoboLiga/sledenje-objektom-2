@@ -4,8 +4,12 @@ import yaml
 
 
 class Tracker:
-    def __init__(self, config_path):
-        self.config = self.read_config(config_path)
+    def __init__(self, tracker_config, game_config):
+        self.tracker_config = self.read_config(tracker_config)
+        if game_config is not None:
+            self.game_config = self.read_config(game_config)
+        else:
+            self.game_config = None
 
     @staticmethod
     def read_config(config_path):
@@ -14,7 +18,7 @@ class Tracker:
 
     def undistort(self, img):
 
-        c = self.config['camera']
+        c = self.tracker_config['camera']
         # Camera parameters
         k1 = c['k1']
         k2 = c['k2']

@@ -5,15 +5,18 @@ from sledilnik.classes.TrackerLiveData import TrackerLiveData
 
 if __name__ == '__main__':
     freeze_support()
+
+    # Create queue for communication between processes
     queue = Queue()
 
+    # Create tracker process
     tracker = TrackerGame()
-    tracker.config['video_source'] = 'ROBO_3.mp4'
-    tracker.debug = True
 
+    # Start tracker process
     p = Process(target=tracker.start, args=(queue,))
     p.start()
 
+    # Read data from queue
     for _ in range(100):
         game_data: TrackerLiveData = queue.get()
         print(game_data.to_json())

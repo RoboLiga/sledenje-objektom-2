@@ -17,16 +17,20 @@ from sledilnik.draw_utils import *
 
 
 class TrackerSetup(Tracker):
-    def __init__(self, config_path='./tracker_config.yaml'):
-        super().__init__(config_path)
-        self.debug = self.config['debug']
+    def __init__(self, tracker_config='./tracker_config.yaml', game_config=None):
+        super().__init__(tracker_config, game_config)
+        self.debug = self.tracker_config['debug']
 
-        self.fields_names = self.config['fields_names']
+        if self.game_config is not None:
+            self.fields_names = self.game_config['fields_names']
+        else:
+            self.fields_names = ['game_field', 'team_1_basket', 'team_2_basket']
+
         self.fields_corners = []
         self.fields = {}
-        if os.path.isfile(self.config['fields_path']):
-            print('Loading fields_corners and fields from file...')
-            saved_fields = pickle.load(open(self.config['fields_path'], "rb"))
+        if os.path.isfile(self.tracker_config['fields_path']):
+            print(f'Loading fields from {self.tracker_config["fields_path"]}')
+            saved_fields = pickle.load(open(self.tracker_config['fields_path'], 'rb'))
             self.fields_corners = saved_fields['fields_corners']
             self.fields = saved_fields['fields']
 
@@ -43,7 +47,7 @@ class TrackerSetup(Tracker):
     def start(self):
         # Load video
         cap = VideoStreamer()
-        cap.start(self.config['video_source'])
+        cap.start(self.tracker_config['video_source'])
 
         # Create window
         cv2.namedWindow(ResGUIText.sWindowName, cv2.WINDOW_NORMAL)
@@ -57,7 +61,7 @@ class TrackerSetup(Tracker):
                 if self.debug:
                     cap.stop()
                     cap = VideoStreamer()
-                    cap.start(self.config['video_source'])
+                    cap.start(self.tracker_config['video_source'])
                     continue
                 break
 
@@ -65,7 +69,7 @@ class TrackerSetup(Tracker):
             self.frame_counter += 1
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            if self.config['undistort']:
+            if self.tracker_config['undistort']:
                 frame = self.undistort(frame)
 
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
@@ -130,7 +134,7 @@ class TrackerSetup(Tracker):
 
         transformation_matrix = cv2.getPerspectiveTransform(
             np.array(self.fields_corners[0:4], np.float32),
-            np.array(self.config['map_virtual_corners'], np.float32),
+            np.array(self.tracker_config['map_virtual_corners'], np.float32),
         )
 
         for i, field_name in enumerate(self.fields_names):
@@ -140,7 +144,7 @@ class TrackerSetup(Tracker):
 
             self.fields[field_name] = Field(*field)
 
-        with open(self.config['fields_path'], 'wb') as output:
+        with open(self.tracker_config['fields_path'], 'wb') as output:
             pickle.dump(
                 {
                     'transformation_matrix': transformation_matrix,
@@ -152,37 +156,3 @@ class TrackerSetup(Tracker):
             )
 
         print(self.fields)
-
-
-def main(argv, tracker_setup: TrackerSetup):
-    try:
-        opts, args = getopt.getopt(argv, "hs:c", ["videoSource="])
-    except getopt.GetoptError:
-        help_text()
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            help_text()
-            sys.exit()
-        elif opt in ("-c", "--camera"):
-            tracker_setup.config['video_source'] = 0
-            print("Set video source to: " + str(0))
-        elif opt in ("-s", "--videoSource"):
-            tracker_setup.config['video_source'] = arg
-            print("Set video source to: " + str(arg))
-        elif opt in ("-d", "--debug"):
-            tracker_setup.debug = True
-
-
-def help_text():
-    print("usage:")
-    print("\t-s <videoSource>            sets video source")
-    print("\t--videoSource <videoSource> sets video source")
-    print("\t-c                          sets camera as video source")
-    print("\t--camera                    sets camera as video source")
-
-
-if __name__ == '__main__':
-    tracker = TrackerSetup()
-    main(sys.argv[1:], tracker)
-    tracker.start()
