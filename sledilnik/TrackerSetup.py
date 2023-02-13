@@ -137,6 +137,7 @@ class TrackerSetup(Tracker):
             np.array(self.tracker_config['map_virtual_corners'], np.float32),
         )
 
+        self.fields = {}
         for i, field_name in enumerate(self.fields_names):
             field = []
             for j in range(4):
