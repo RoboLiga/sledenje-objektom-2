@@ -145,7 +145,7 @@ class TrackerSetup(Tracker):
 
             self.fields[field_name] = Field(*field)
 
-        with open(self.tracker_config['fields_path'], 'wb') as output:
+        with open(self.tracker_config['fields_path'], 'wb', encoding="utf-8") as output:
             pickle.dump(
                 {
                     'transformation_matrix': transformation_matrix,
