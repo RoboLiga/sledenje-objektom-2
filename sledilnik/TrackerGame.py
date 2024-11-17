@@ -45,7 +45,7 @@ class TrackerGame(Tracker):
         while not self.should_quit and cap.running:
 
             # Load frame-by-frame
-            frame = cap.read()
+            frame, timestamp = cap.read()
             if frame is None:
                 if self.debug:
                     cap.stop()
@@ -74,6 +74,9 @@ class TrackerGame(Tracker):
 
             # Detect Validate and track game_objects on map
             self.track(points_tracked)
+
+            # Update timestamp
+            self.data.timestamp = timestamp
 
             # Write game data
             if queue is not None:

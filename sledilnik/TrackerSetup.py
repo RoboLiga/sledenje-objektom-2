@@ -56,7 +56,7 @@ class TrackerSetup(Tracker):
         while not self.should_quit and cap.running:
 
             # Load frame-by-frame
-            frame = cap.read()
+            frame, timestamp = cap.read()
             if frame is None:
                 if self.debug:
                     cap.stop()
@@ -91,6 +91,9 @@ class TrackerSetup(Tracker):
             fps = 1 / (te - ts)
             draw_fps(frame, fps)
             ts = te
+
+            # Update timestamp
+            self.data.timestamp = timestamp
 
             # Show frame
             cv2.imshow(ResGUIText.sWindowName, frame)

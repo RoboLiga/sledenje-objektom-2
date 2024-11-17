@@ -1,5 +1,5 @@
 import threading
-
+import time
 import cv2
 
 
@@ -9,6 +9,7 @@ class VideoStreamer:
     def __init__(self):
         self.ret = None
         self.frame = None
+        self.timestamp = None
         self.video = None
         self.running = False
         return
@@ -25,6 +26,7 @@ class VideoStreamer:
             # Camera failed
             raise IOError("Couldn't open video file or webcam.")
         self.ret, self.frame = self.video.read()
+        self.timestamp = time.time()
         if not self.ret:
             self.video.release()
             raise IOError("Couldn't open video frame.")
@@ -42,6 +44,7 @@ class VideoStreamer:
             while self.running:
                 #  Read the next frame from the stream
                 self.ret, self.frame = self.video.read()
+                self.timestamp = time.time()
         except:
             import traceback
             traceback.print_exc()
@@ -53,7 +56,7 @@ class VideoStreamer:
 
     def read(self):
         # Return the frame most recently read
-        return self.frame
+        return self.frame, self.timestamp
 
     def stop(self):
         self.running = False
