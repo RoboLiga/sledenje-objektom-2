@@ -93,7 +93,7 @@ class TrackerSetup(Tracker):
             ts = te
 
             # Update timestamp
-            self.data.timestamp = timestamp
+            #self.data.timestamp = timestamp
 
             # Show frame
             cv2.imshow(ResGUIText.sWindowName, frame)
