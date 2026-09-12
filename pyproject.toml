@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sledenje-objektom-2"
+version = "1.0.0"
+readme = "README.md"
+requires-python = ">=3.12"
+description = "Object tracker using a camera as its source and tracks using Aruco tags"
+authors = [
+    { name = "Jakob Maležič", email = "jakob.malezic@gmail.com" }
+]
+maintainers = [
+    { name = "Žiga Slatnar Štagar", email = "contact@privatech.dev" }
+]
+license = { text = "unlicense" }
+dependencies = [
+    "opencv-contrib-python==4.14.0.94",
+    "numpy==2.5.3",
+    "shapely==2.1.2"
+]
+
+[project.urls]
+Repository = "https://github.com/RoboLiga/sledenje-objektom-2"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
