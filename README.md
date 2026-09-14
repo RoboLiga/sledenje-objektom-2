@@ -12,7 +12,7 @@ pip install -e <path-to-folder>
 
 ### CLI reference
 
-#### `main.py` — run the Robo Liga FRI tracker and game server
+#### `main.py` — run the Robo Liga FRI tracker server
 
 **Synopsis**
 
@@ -21,8 +21,7 @@ uv run main.py [-g PATH] [-t PATH] [-s]
 uv run main.py -h
 ```
 
-Starts the game server for a given game, or runs interactive tracker setup to mark the game area and fields.
-`-n`/`--game` is required; all other options are optional.
+Starts the tracker server or runs an interactive setup to mark the game area and fields.
 
 **Options**
 
